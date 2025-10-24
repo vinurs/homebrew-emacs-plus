@@ -46,8 +46,8 @@ class EmacsPlusAT31 < EmacsBase
   depends_on "dbus" => :optional
   depends_on "mailutils" => :optional
   # `libgccjit` and `gcc` are required when Emacs compiles `*.elc` files asynchronously (JIT)
-  depends_on "libgccjit"
-  depends_on "gcc"
+  # depends_on "libgccjit"
+  # depends_on "gcc"
 
   depends_on "gmp" => :build
   depends_on "libjpeg" => :build
@@ -106,7 +106,7 @@ class EmacsPlusAT31 < EmacsBase
       --enable-locallisppath=#{HOMEBREW_PREFIX}/share/emacs/site-lisp
       --infodir=#{info}/emacs
       --prefix=#{prefix}
-      --with-native-compilation=aot
+      --without-native-compilation
     ]
 
     args << "--with-xml2"
@@ -121,15 +121,15 @@ class EmacsPlusAT31 < EmacsBase
     ENV.append "LDFLAGS", "-L#{Formula["sqlite"].opt_lib}"
 
     # Necessary for libgccjit library discovery
-    gcc_ver = Formula["gcc"].any_installed_version
-    gcc_ver_major = gcc_ver.major
-    gcc_lib="#{HOMEBREW_PREFIX}/lib/gcc/#{gcc_ver_major}"
+    # gcc_ver = Formula["gcc"].any_installed_version
+    # gcc_ver_major = gcc_ver.major
+    # gcc_lib="#{HOMEBREW_PREFIX}/lib/gcc/#{gcc_ver_major}"
 
-    ENV.append "CFLAGS", "-I#{Formula["gcc"].include}"
-    ENV.append "CFLAGS", "-I#{Formula["libgccjit"].include}"
+    # ENV.append "CFLAGS", "-I#{Formula["gcc"].include}"
+    # ENV.append "CFLAGS", "-I#{Formula["libgccjit"].include}"
 
-    ENV.append "LDFLAGS", "-L#{gcc_lib}"
-    ENV.append "LDFLAGS", "-Wl,-rpath,#{gcc_lib}"
+    # ENV.append "LDFLAGS", "-L#{gcc_lib}"
+    # ENV.append "LDFLAGS", "-Wl,-rpath,#{gcc_lib}"
 
     args <<
       if build.with? "dbus"
