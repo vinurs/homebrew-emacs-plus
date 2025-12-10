@@ -199,7 +199,7 @@ class EmacsPlusAT31 < EmacsBase
 
       # (prefix/"share/emacs/#{version}").install "lisp"
       prefix.install "nextstep/Emacs.app"
-      (prefix/"Emacs.app/Contents").install "native-lisp"
+      # (prefix/"Emacs.app/Contents").install "native-lisp"
       prefix.install "nextstep/Emacs Client.app"
 
       # inject PATH to Info.plist
