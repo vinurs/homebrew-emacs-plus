@@ -34,6 +34,8 @@ Emacs+ is [[https://www.gnu.org/software/emacs/emacs.html][→ GNU Emacs]] formu
 
 Feel free to open an issue or contact me via email if you face any issues, questions or feature requests. I love pull requests, so do send them. You might want to check [[docs/development-guidelines.org][→ Development guidelines]] to have better understanding on how to contribute.
 
+For recent changes, see [[./NEWS.org][→ News]].
+
 ** Table of Contents :TOC_3:
   - [[#about][About]]
   - [[#install][Install]]
@@ -68,8 +70,7 @@ Feel free to open an issue or contact me via email if you face any issues, quest
     - [[#emacs-27][Emacs 27]]
     - [[#emacs-26][Emacs 26]]
   - [[#faq][FAQ]]
-    - [[#how-to-changepin-commit-emacs-plus30-is-built-from][How to change/pin commit =emacs-plus@30= is built from]]
-    - [[#how-to-changepin-commit-emacs-plus31-is-built-from][How to change/pin commit =emacs-plus@31= is built from]]
+    - [[#how-to-pin-a-specific-commit][How to pin a specific commit]]
   - [[#screenshots][Screenshots]]
   - [[#acknowledgements][Acknowledgements]]
 
@@ -129,7 +130,7 @@ In short, =brew= doesn't really support options. They break time to time ([[http
 By default =emacs-plus@31= uses the following features.
 
 - Injected =PATH= value from user shell (see separate section explaining this feature).
-- Cocoa version, e.g. builds =Emacs.app= and =Emacs Client.app= (see [[#emacs-client-app][→ Emacs Client.app]] for details).
+- Cocoa version, e.g. builds =Emacs.app= and =Emacs Client.app= (see [[#emacs-clientapp][→ Emacs Client.app]] for details).
 - Unconditional support for =gnutls=, =librsvg=, =webp=, =libxml2=, =little-cms2=, =tree-sitter= and dynamic modules.
 - Build with native compilation.
 
@@ -143,9 +144,11 @@ By default =emacs-plus@31= uses the following features.
 | =--with-imagemagick=      | build with =imagemagick= support                                               |
 | =--with-mailutils=        | build with mailutils support                                                 |
 | =--with-no-frame-refocus= | disables frame re-focus (ie. closing one frame does not refocus another one) |
-| =--with-x11=              | build with x11 support                                                       |
+| =--with-x11=              | build with x11 support (disables Cocoa, no =Emacs.app= bundle)               |
 | =--with-xwidgets=         | build [[#xwidgets-webkit][→ with xwidgets]] support                                                |
-| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only)                           |
+| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only, no =Emacs.app= bundle)    |
+
+*Note:* Options =--with-x11= and =--without-cocoa= produce terminal/X11 builds that do not include =Emacs.app=. Icon options are ignored for these builds.
 
 *** No title bar
 Please note, that ~--with-no-titlebar~ is no longer needed in Emacs 30+, since the same can be achieved natively using [[https://github.com/d12frosted/homebrew-emacs-plus#emacs-29-1][this method]].
@@ -157,7 +160,7 @@ Please note, that ~--with-no-titlebar~ is no longer needed in Emacs 30+, since t
 By default =emacs-plus@30= uses the following features.
 
 - Injected =PATH= value from user shell (see separate section explaining this feature).
-- Cocoa version, e.g. builds =Emacs.app= and =Emacs Client.app= (see [[#emacs-client-app][→ Emacs Client.app]] for details).
+- Cocoa version, e.g. builds =Emacs.app= and =Emacs Client.app= (see [[#emacs-clientapp][→ Emacs Client.app]] for details).
 - Unconditional support for =gnutls=, =librsvg=, =webp=, =libxml2=, =little-cms2=, =tree-sitter= and dynamic modules.
 - Build with native compilation.
 
@@ -172,9 +175,11 @@ By default =emacs-plus@30= uses the following features.
 | =--with-imagemagick=      | build with =imagemagick= support                                               |
 | =--with-mailutils=        | build with mailutils support                                                 |
 | =--with-no-frame-refocus= | disables frame re-focus (ie. closing one frame does not refocus another one) |
-| =--with-x11=              | build with x11 support                                                       |
+| =--with-x11=              | build with x11 support (disables Cocoa, no =Emacs.app= bundle)               |
 | =--with-xwidgets=         | build [[#xwidgets-webkit][→ with xwidgets]] support                                                |
-| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only)                           |
+| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only, no =Emacs.app= bundle)    |
+
+*Note:* Options =--with-x11= and =--without-cocoa= produce terminal/X11 builds that do not include =Emacs.app=. Icon options are ignored for these builds.
 
 *** No title bar
 Please note, that ~--with-no-titlebar~ is no longer needed in Emacs 30, since the same can be achieved natively using [[https://github.com/d12frosted/homebrew-emacs-plus#emacs-29-1][this method]].
@@ -201,9 +206,11 @@ By default =emacs-plus@29= uses the following features.
 | =--with-mailutils=        | build with mailutils support                                                 |
 | =--with-native-comp=      | build with native compilation aka [[#gccemacs][→ gccemacs]]                                 |
 | =--with-no-frame-refocus= | disables frame re-focus (ie. closing one frame does not refocus another one) |
-| =--with-x11=              | build with x11 support                                                       |
+| =--with-x11=              | build with x11 support (disables Cocoa, no =Emacs.app= bundle)               |
 | =--with-xwidgets=         | build [[#xwidgets-webkit][→ with xwidgets]] support                                                |
-| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only)                           |
+| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only, no =Emacs.app= bundle)    |
+
+*Note:* Options =--with-x11= and =--without-cocoa= produce terminal/X11 builds that do not include =Emacs.app=. Icon options are ignored for these builds.
 
 *** No title bar
 Please note, that ~--with-no-titlebar~ is no longer needed in Emacs 29, since the same can be achieved natively using [[https://github.com/d12frosted/homebrew-emacs-plus#emacs-29-1][this method]].
@@ -246,6 +253,7 @@ Starting with =emacs-plus@30= and =emacs-plus@31=, the formula includes a compan
 - *Fast startup* - No need to launch a full Emacs instance for each file
 - *Shared session* - All files opened via Emacs Client appear in the same Emacs session
 - *Seamless integration* - Works with "Open With" in Finder, drag-and-drop, and can be set as the default application for text files
+- *org-protocol support* - Handles =org-protocol://= URLs for org-capture, org-roam, and other integrations
 
 **** Usage
 
@@ -265,6 +273,7 @@ You can then:
 - Drag files onto the Emacs Client.app icon
 - Set Emacs Client as the default application for specific file types
 - Launch from Spotlight to create a new Emacs frame
+- Use =org-protocol://= URLs from browser extensions (requires =(require 'org-protocol)= in your init file)
 
 The implementation uses AppleScript to properly handle macOS AppleEvents, ensuring files opened from Finder are correctly passed to =emacsclient=. PATH injection works the same as in =Emacs.app= (see [[#injected-path][→ Injected PATH]]).
 
@@ -360,6 +369,11 @@ icon: modern-purple-flat
 # icon:
 #   url: https://example.com/my-icon.icns
 #   sha256: abc123...
+
+# Pin to a specific git revision (version-specific)
+# revision:
+#   "30": abc123def456
+#   "31": 789abcdef123
 
 # Apply community patches
 # patches:
@@ -494,13 +508,15 @@ By default =emacs-plus@28= uses the following features.
 | =--with-no-frame-refocus=              | disables frame re-focus (ie. closing one frame does not refocus another one) |
 | =--with-no-titlebar=                   | build [[#no-titlebar][→ without titlebar]]                                                     |
 | =--with-no-titlebar-and-round-corners= | build [[#no-titlebar][→ without titlebar]], but round corners instead of square                |
-| =--with-x11=                           | build with x11 support                                                       |
+| =--with-x11=                           | build with x11 support (disables Cocoa, no =Emacs.app= bundle)               |
 | =--with-xwidgets=                      | build [[#xwidgets-webkit][→ with xwidgets]] support                                                |
-| =--without-cocoa=                      | build a non-Cocoa version of Emacs (terminal only)                           |
+| =--without-cocoa=                      | build a non-Cocoa version of Emacs (terminal only, no =Emacs.app= bundle)    |
 | =--with-imagemagick=                   | build with =imagemagick= support                                               |
 | =--HEAD=                               | build from =emacs-28= branch                                                   |
 | =--with-native-comp=                   | build with native compilation aka [[#gccemacs][→ gccemacs]]                                 |
 |                                      |                                                                              |
+
+*Note:* Options =--with-x11= and =--without-cocoa= produce terminal/X11 builds that do not include =Emacs.app=. Icon options are ignored for these builds.
 
 *** Emacs 27
 
@@ -521,11 +537,13 @@ By default =emacs-plus@27= uses the following features.
 | =--with-mailutils=        | build with mailutils support                                                 |
 | =--with-no-frame-refocus= | disables frame re-focus (ie. closing one frame does not refocus another one) |
 | =--with-no-titlebar=      | build [[#no-titlebar][→ without titlebar]]                                                     |
-| =--with-x11=              | build with x11 support                                                       |
+| =--with-x11=              | build with x11 support (disables Cocoa, no =Emacs.app= bundle)               |
 | =--with-xwidgets=         | build [[#xwidgets-webkit][→ with xwidgets]] support                                                |
-| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only)                           |
+| =--without-cocoa=         | build a non-Cocoa version of Emacs (terminal only, no =Emacs.app= bundle)    |
 | =--without-imagemagick=   | build without =imagemagick= support                                            |
 | =--HEAD=                  | build from =emacs-27= branch                                                   |
+
+*Note:* Options =--with-x11= and =--without-cocoa= produce terminal/X11 builds that do not include =Emacs.app=. Icon options are ignored for these builds.
 
 *** Emacs 26
 
@@ -533,29 +551,29 @@ Emacs 26 comes without any available options due to [[https://github.com/d12fros
 
 ** FAQ
 
-*** How to change/pin commit =emacs-plus@30= is built from
+*** How to pin a specific commit
 
-The most current development version is consistently compiled from a specific branch. At the time of this writing, for instance, =emacs-plus@30= is being built from the =emacs-30= branch.
+Development versions (=emacs-plus@30=, =emacs-plus@31=) are built from their respective branches (=emacs-30=, =master=). Ordinarily, =brew= will update to the latest commit during installation.
 
-Ordinarily, =brew= will update to the latest commit in the specified branch during installation, meaning the exact commit you're building from varies depending on the installation timing. As development versions are less stable than official releases, some users may prefer to pin a specific commit.
+As development versions are less stable than official releases, you may want to pin a specific commit. The recommended way is to use =~/.config/emacs-plus/build.yml=:
 
-Usually this is done by modifying formula (i.e. by executing =brew edit emacs-plus@30= and altering the =url= directive), but you can also set =HOMEBREW_EMACS_PLUS_30_REVISION= environment variable before installing =emacs-plus@30=:
-
-#+begin_src bash
-  $ HOMEBREW_EMACS_PLUS_30_REVISION=6abea4d98d1d964c68a78cb9b5321071da851654 brew install emacs-plus@30 [OPTIONS]
+#+begin_src yaml
+revision:
+  "30": 6abea4d98d1d964c68a78cb9b5321071da851654
+  "31": abc123def456789
 #+end_src
 
-*** How to change/pin commit =emacs-plus@31= is built from
-
-The most current development version is consistently compiled from a specific branch. At the time of this writing, for instance, =emacs-plus@31= is being built from the =master= branch.
-
-Ordinarily, =brew= will update to the latest commit in the specified branch during installation, meaning the exact commit you're building from varies depending on the installation timing. As development versions are less stable than official releases, some users may prefer to pin a specific commit.
-
-Usually this is done by modifying formula (i.e. by executing =brew edit emacs-plus@31= and altering the =url= directive), but you can also set =HOMEBREW_EMACS_PLUS_31_REVISION= environment variable before installing =emacs-plus@31=:
+Then install or reinstall:
 
 #+begin_src bash
-  $ HOMEBREW_EMACS_PLUS_31_REVISION=6abea4d98d1d964c68a78cb9b5321071da851654 brew install emacs-plus@31 [OPTIONS]
+  $ brew reinstall emacs-plus@30
 #+end_src
+
+The build will display the pinned revision during installation.
+
+#+begin_quote
+*Deprecated*: Environment variables =HOMEBREW_EMACS_PLUS_30_REVISION= and =HOMEBREW_EMACS_PLUS_31_REVISION= still work but are deprecated. Please migrate to =build.yml=.
+#+end_quote
 
 ** Screenshots
 

@@ -73,7 +73,9 @@ class EmacsPlusAT31 < EmacsBase
   # URL
   #
 
-  if ENV['HOMEBREW_EMACS_PLUS_31_REVISION']
+  if (config_revision = revision_from_config(31))
+    url "https://github.com/emacs-mirror/emacs.git", :revision => config_revision
+  elsif ENV['HOMEBREW_EMACS_PLUS_31_REVISION']
     url "https://github.com/emacs-mirror/emacs.git", :revision => ENV['HOMEBREW_EMACS_PLUS_31_REVISION']
   else
     url "https://github.com/emacs-mirror/emacs.git", :branch => "master"
@@ -92,6 +94,7 @@ class EmacsPlusAT31 < EmacsBase
   opoo "The option --with-no-frame-refocus is not required anymore in emacs-plus@31." if build.with? "no-frame-refocus"
   local_patch "system-appearance", sha: "53283503db5ed2887e9d733baaaf80f2c810e668e782e988bda5855a0b1ebeb4"
   local_patch "round-undecorated-frame", sha: "26947b6724fc29fadd44889808c5cf0b4ce6278cf04f46086a21df50c8c4151d"
+  local_patch "mac-font-use-typo-metrics", sha: "318395d3869d3479da4593360bcb11a5df08b494b995287074d0d744ec562c17"
   # 自动切换输入法
   local_patch "ns-mac-input-source", sha: "99fefba9eb0725743a901cd95e0deb575193e1d258094cb56ccbac37ada0ffa2"
 
@@ -102,6 +105,10 @@ class EmacsPlusAT31 < EmacsBase
   def install
     # Check for deprecated --with-*-icon options and auto-migrate
     check_deprecated_icon_option
+    # Check icon options are not used with non-Cocoa builds
+    check_icon_compatibility
+    # Warn if revision is pinned via config or environment variable
+    check_pinned_revision(31)
     # Validate build.yml configuration early to fail fast
     validate_custom_config
 
@@ -222,10 +229,18 @@ class EmacsPlusAT31 < EmacsBase
       inject_protected_resources_usage_desc
 
       # Replace the symlink with one that avoids starting Cocoa.
+      # Check multiple locations so users can copy Emacs.app to /Applications
+      # for better Spotlight integration.
       (bin/"emacs").unlink # Kill the existing symlink
       (bin/"emacs").write <<~EOS
         #!/bin/bash
-        exec #{prefix}/Emacs.app/Contents/MacOS/Emacs "$@"
+        for app in "/Applications/Emacs.app" "$HOME/Applications/Emacs.app" "#{prefix}/Emacs.app"; do
+          if [ -x "$app/Contents/MacOS/Emacs" ]; then
+            exec "$app/Contents/MacOS/Emacs" "$@"
+          fi
+        done
+        echo "Error: Emacs.app not found in /Applications, ~/Applications, or #{prefix}" >&2
+        exit 1
       EOS
     else
       if build.with? "x11"
@@ -272,18 +287,21 @@ class EmacsPlusAT31 < EmacsBase
       Emacs.app and Emacs Client.app were installed to:
         #{prefix}
 
-      To link the application to default Homebrew App location:
+      For best Spotlight integration, copy the apps to /Applications:
+        cp -r #{prefix}/Emacs.app /Applications/
+        cp -r "#{prefix}/Emacs Client.app" /Applications/
+
+      The `emacs` command will automatically find the app in /Applications.
+
+      Alternatively, create Finder aliases (less reliable with Spotlight):
         osascript -e 'tell application "Finder" to make alias file to posix file "#{prefix}/Emacs.app" at posix file "/Applications" with properties {name:"Emacs.app"}'
-        osascript -e 'tell application "Finder" to make alias file to posix file "#{prefix}/Emacs Client.app" at posix file "/Applications" with properties {name:"Emacs Client.app"}'
 
       Custom icons and patches can be configured via ~/.config/emacs-plus/build.yml
       See: https://github.com/d12frosted/homebrew-emacs-plus/blob/master/community/README.md
 
-      Your PATH value was injected into Emacs.app via a wrapper script.
-      This solves the issue with macOS Sequoia ignoring LSEnvironment in Info.plist.
-
-      To disable PATH injection, set EMACS_PLUS_NO_PATH_INJECTION before running Emacs:
-        export EMACS_PLUS_NO_PATH_INJECTION=1
+      If Emacs fails to start with "Library not loaded" errors after upgrading
+      dependencies (e.g., tree-sitter, libgccjit), reinstall emacs-plus:
+        brew reinstall emacs-plus@31
 
       Report any issues to https://github.com/d12frosted/homebrew-emacs-plus
     EOS
