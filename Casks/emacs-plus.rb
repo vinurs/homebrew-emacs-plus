@@ -1,31 +1,21 @@
 cask "emacs-plus" do
-  version "30.1-20251229"
+  # Version format: <emacs-version>-<build-number>
+  # Build number corresponds to GitHub Actions run number
+  version "30-7"
 
-  # Architecture and macOS version specific builds
-  arch arm: "arm64", intel: "x86_64"
-
+  # TODO: Add Intel and other macOS version builds in Phase 4
+  # For now, only ARM64 + Tahoe is supported
   on_intel do
-    depends_on macos: ">= :ventura"
-    sha256 "PLACEHOLDER_INTEL_SHA256"
-    url "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/v#{version}/emacs-plus-30-x86_64.zip",
-        verified: "github.com/d12frosted/homebrew-emacs-plus"
+    odie "Intel builds are not yet available. Use the formula instead: brew install emacs-plus@30"
   end
 
   on_arm do
-    depends_on macos: ">= :ventura"
-
     if MacOS.version >= :tahoe # macOS 26
-      sha256 "PLACEHOLDER_ARM64_TAHOE_SHA256"
-      url "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/v#{version}/emacs-plus-30-arm64-26.zip",
+      sha256 "863a3f713b33ea88a1925d260c5b612c546c04ca265a0201b741ed1b959ef5d9"
+      url "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-#{version.sub(/^\d+-/, "")}/emacs-plus-#{version.sub(/-\d+$/, "")}-arm64-26.0.1.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
-    elsif MacOS.version >= :sequoia # macOS 15
-      sha256 "PLACEHOLDER_ARM64_SEQUOIA_SHA256"
-      url "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/v#{version}/emacs-plus-30-arm64-15.zip",
-          verified: "github.com/d12frosted/homebrew-emacs-plus"
-    else # macOS 14 (Sonoma) and 13 (Ventura)
-      sha256 "PLACEHOLDER_ARM64_SONOMA_SHA256"
-      url "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/v#{version}/emacs-plus-30-arm64-14.zip",
-          verified: "github.com/d12frosted/homebrew-emacs-plus"
+    else
+      odie "Pre-built cask only available for macOS Tahoe (26+) currently. Use the formula instead: brew install emacs-plus@30"
     end
   end
 
@@ -33,22 +23,26 @@ cask "emacs-plus" do
   desc "GNU Emacs text editor with patches for macOS"
   homepage "https://github.com/d12frosted/homebrew-emacs-plus"
 
-  # Conflict with other Emacs installations
+  # Conflict with other Emacs cask installations
   conflicts_with cask: [
     "emacs",
     "emacs-mac",
     "emacs-mac-spacemacs-icon",
   ]
-  conflicts_with formula: [
-    "emacs",
-    "emacs-plus@29",
-    "emacs-plus@30",
-    "emacs-plus@31",
-  ]
 
   # Install the app
   app "Emacs.app"
   app "Emacs Client.app"
+
+  # Remove quarantine attribute (app is not code signed)
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{appdir}/Emacs.app"],
+                   sudo: false
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{appdir}/Emacs Client.app"],
+                   sudo: false
+  end
 
   # Symlink binaries
   binary "#{appdir}/Emacs.app/Contents/MacOS/Emacs", target: "emacs"
@@ -57,11 +51,11 @@ cask "emacs-plus" do
   binary "#{appdir}/Emacs.app/Contents/MacOS/bin/etags"
   binary "#{appdir}/Emacs.app/Contents/MacOS/bin/ctags", target: "emacs-ctags"
 
-  # Man pages
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacs.1.gz"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacsclient.1.gz"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/ebrowse.1.gz"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/etags.1.gz"
+  # Man pages (not gzipped in the build)
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacs.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacsclient.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/ebrowse.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/etags.1"
 
   # Cleanup on uninstall
   zap trash: [
@@ -74,14 +68,11 @@ cask "emacs-plus" do
   caveats <<~EOS
     Emacs+ has been installed to /Applications.
 
-    To change the icon, use epm (Emacs Plus Manager):
-      brew install d12frosted/emacs-plus/epm
-      epm icon modern-doom
-
-    For custom patches or build options, use the formula instead:
+    This is a pre-built binary. For custom patches or build options,
+    use the formula instead:
       brew install emacs-plus@30 --with-...
 
-    To start Emacs as a daemon:
-      brew services start d12frosted/emacs-plus/emacs-plus
+    Note: Emacs Client.app requires Emacs to be running as a daemon.
+    Add to your Emacs config: (server-start)
   EOS
 end
