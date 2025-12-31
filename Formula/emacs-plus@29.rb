@@ -95,6 +95,7 @@ class EmacsPlusAT29 < EmacsBase
   local_patch "system-appearance", sha: "d6ee159839b38b6af539d7b9bdff231263e451c1fd42eec0d125318c9db8cd92"
   local_patch "round-undecorated-frame", sha: "7451f80f559840e54e6a052e55d1100778abc55f98f1d0c038a24e25773f2874"
   local_patch "mac-font-use-typo-metrics", sha: "318395d3869d3479da4593360bcb11a5df08b494b995287074d0d744ec562c17"
+  local_patch "treesit-compatibility", sha: "6bfcd2463e9571e17ed697625769b4db26607281dc82da4cf618910898001096" if build.with? "tree-sitter"
 
   #
   # Install
@@ -289,6 +290,13 @@ class EmacsPlusAT29 < EmacsBase
     end
     if build.with? "native-comp"
       ln_sf "#{Dir[opt_prefix/"lib/emacs/*"].first}/native-lisp", "#{opt_prefix}/Emacs.app/Contents/native-lisp"
+    end
+
+    # Re-sign the app for macOS Sequoia compatibility (issue #742)
+    app_path = prefix/"Emacs.app"
+    if app_path.exist?
+      ohai "Re-signing Emacs.app for macOS compatibility..."
+      system "codesign", "--force", "--deep", "--sign", "-", app_path.to_s
     end
   end
 
