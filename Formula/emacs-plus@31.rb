@@ -142,13 +142,13 @@ class EmacsPlusAT31 < EmacsBase
     cflags << "-DFD_SETSIZE=10000"
     cflags << "-DDARWIN_UNLIMITED_SELECT"
     cflags << "-I#{Formula["sqlite"].include}"
-    cflags << "-I#{Formula["gcc"].include}"
-    cflags << "-I#{Formula["libgccjit"].include}"
+    # cflags << "-I#{Formula["gcc"].include}"
+    # cflags << "-I#{Formula["libgccjit"].include}"
     args << "CFLAGS=#{cflags.join(" ")}"
 
     ENV.append "LDFLAGS", "-L#{Formula["sqlite"].opt_lib}"
-    ENV.append "LDFLAGS", "-L#{gcc_lib}"
-    ENV.append "LDFLAGS", "-Wl,-rpath,#{gcc_lib}"
+    # ENV.append "LDFLAGS", "-L#{gcc_lib}"
+    # ENV.append "LDFLAGS", "-Wl,-rpath,#{gcc_lib}"
 
     args <<
       if build.with? "dbus"
