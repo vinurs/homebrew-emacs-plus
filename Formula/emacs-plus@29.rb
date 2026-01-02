@@ -125,11 +125,17 @@ class EmacsPlusAT29 < EmacsBase
     args << "--with-native-compilation" if build.with? "native-comp"
     args << "--without-compress-install" if build.without? "compress-install"
 
-    ENV.append "CFLAGS", "-g -Og" if build.with? "debug"
-    ENV.append "CFLAGS", "-O2 -DFD_SETSIZE=10000 -DDARWIN_UNLIMITED_SELECT"
+    # Enable debug symbols in Homebrew's superenv
+    if build.with? "debug"
+      ENV.set_debug_symbols
+    end
 
-    ENV.append "CFLAGS", "-I#{Formula["sqlite"].include}"
-    ENV.append "LDFLAGS", "-L#{Formula["sqlite"].opt_lib}"
+    # Build CFLAGS - pass to configure for includes and defines
+    # Note: Homebrew's superenv handles optimization (-O2) and debug (-g) flags
+    cflags = []
+    cflags << "-DFD_SETSIZE=10000"
+    cflags << "-DDARWIN_UNLIMITED_SELECT"
+    cflags << "-I#{Formula["sqlite"].include}"
 
     # Necessary for libgccjit library discovery
     if build.with? "native-comp"
@@ -137,13 +143,16 @@ class EmacsPlusAT29 < EmacsBase
       gcc_ver_major = gcc_ver.major
       gcc_lib="#{HOMEBREW_PREFIX}/lib/gcc/#{gcc_ver_major}"
 
-      ENV.append "CFLAGS", "-I#{Formula["gcc"].include}"
-      ENV.append "CFLAGS", "-I#{Formula["libgccjit"].include}"
+      cflags << "-I#{Formula["gcc"].include}"
+      cflags << "-I#{Formula["libgccjit"].include}"
 
       ENV.append "LDFLAGS", "-L#{gcc_lib}"
       ENV.append "LDFLAGS", "-I#{Formula["gcc"].include}"
       ENV.append "LDFLAGS", "-I#{Formula["libgccjit"].include}"
     end
+
+    args << "CFLAGS=#{cflags.join(" ")}"
+    ENV.append "LDFLAGS", "-L#{Formula["sqlite"].opt_lib}"
 
     args <<
       if build.with? "dbus"
@@ -198,6 +207,12 @@ class EmacsPlusAT29 < EmacsBase
 
       system "gmake"
 
+      # Generate dSYM bundle for debugging BEFORE install (clang stores symbols
+      # in .o files, and dsymutil needs them to extract debug info)
+      if build.with? "debug"
+        system "dsymutil", "nextstep/Emacs.app/Contents/MacOS/Emacs"
+      end
+
       system "gmake", "install"
 
       icons_dir = buildpath/"nextstep/Emacs.app/Contents/Resources"
@@ -221,6 +236,14 @@ class EmacsPlusAT29 < EmacsBase
 
       # inject PATH to Info.plist
       inject_path
+
+      # Rename dSYM to match the binary name (Emacs-real) so lldb auto-finds it
+      if build.with? "debug"
+        dsym_path = prefix/"Emacs.app/Contents/MacOS/Emacs.dSYM"
+        if dsym_path.exist?
+          mv dsym_path, prefix/"Emacs.app/Contents/MacOS/Emacs-real.dSYM"
+        end
+      end
 
       # inject description for protected resources usage
       inject_protected_resources_usage_desc
@@ -268,6 +291,12 @@ class EmacsPlusAT29 < EmacsBase
       end
 
       system "gmake"
+
+      # Generate dSYM bundle for debugging BEFORE install (non-Cocoa build)
+      if build.with? "debug"
+        system "dsymutil", "src/emacs"
+      end
+
       system "gmake", "install"
     end
 
