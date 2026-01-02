@@ -496,6 +496,113 @@ class EmacsBase < Formula
     puts "  Icon applied successfully"
   end
 
+  # Apply icon during post_install (for quick testing without rebuild)
+  # Call this from post_install to re-apply icon from build.yml
+  def apply_icon_post_install
+    app_path = prefix/"Emacs.app"
+    return unless app_path.exist?
+
+    icons_dir = app_path/"Contents/Resources"
+
+    icon = resolve_icon
+    unless icon
+      ohai "No custom icon configured in build.yml"
+      return
+    end
+
+    require 'fileutils'
+
+    ohai "Applying icon from build.yml: #{icon[:name] || 'external'}"
+
+    target_icon = "#{icons_dir}/Emacs.icns"
+    target_assets = "#{icons_dir}/Assets.car"
+
+    case icon[:type]
+    when "community", "legacy"
+      maintainer_str = format_maintainer(icon[:metadata]&.dig("maintainer"))
+      puts "  Maintainer: #{maintainer_str}" if maintainer_str
+      puts "  Copying #{icon[:path]} -> #{target_icon}"
+      FileUtils.rm_f(target_icon)
+      FileUtils.cp(icon[:path], target_icon)
+
+      # Handle Tahoe Assets.car
+      if icon[:tahoe_path]
+        puts "  Copying #{icon[:tahoe_path]} -> #{target_assets} (Tahoe)"
+        FileUtils.rm_f(target_assets)
+        FileUtils.cp(icon[:tahoe_path], target_assets)
+
+        # Set CFBundleIconName for Tahoe
+        tahoe_icon_name = icon[:metadata]&.dig("tahoe_icon_name") || "Emacs"
+        plist_path = app_path/"Contents/Info.plist"
+        if plist_path.exist?
+          puts "  Setting CFBundleIconName = #{tahoe_icon_name}"
+          system "/usr/libexec/PlistBuddy -c 'Delete :CFBundleIconName' '#{plist_path}' 2>/dev/null || true"
+          system "/usr/libexec/PlistBuddy", "-c", "Add :CFBundleIconName string #{tahoe_icon_name}", plist_path.to_s
+        end
+      else
+        # Remove stale Assets.car if switching to non-Tahoe icon
+        FileUtils.rm_f(target_assets) if File.exist?(target_assets)
+        # Remove CFBundleIconName if present
+        plist_path = app_path/"Contents/Info.plist"
+        if plist_path.exist?
+          system "/usr/libexec/PlistBuddy -c 'Delete :CFBundleIconName' '#{plist_path}' 2>/dev/null || true"
+        end
+      end
+
+      # Also update Emacs Client.app if it exists
+      client_app = prefix/"Emacs Client.app"
+      if client_app.exist?
+        client_icons = client_app/"Contents/Resources"
+        client_plist = client_app/"Contents/Info.plist"
+        puts "  Updating Emacs Client.app icon..."
+        FileUtils.rm_f("#{client_icons}/Emacs.icns")
+        FileUtils.cp(icon[:path], "#{client_icons}/Emacs.icns")
+
+        if icon[:tahoe_path]
+          FileUtils.rm_f("#{client_icons}/Assets.car")
+          FileUtils.cp(icon[:tahoe_path], "#{client_icons}/Assets.car")
+          tahoe_icon_name = icon[:metadata]&.dig("tahoe_icon_name") || "Emacs"
+          system "/usr/libexec/PlistBuddy -c 'Delete :CFBundleIconName' '#{client_plist}' 2>/dev/null || true"
+          system "/usr/libexec/PlistBuddy", "-c", "Add :CFBundleIconName string #{tahoe_icon_name}", client_plist.to_s
+        else
+          FileUtils.rm_f("#{client_icons}/Assets.car")
+          system "/usr/libexec/PlistBuddy -c 'Delete :CFBundleIconName' '#{client_plist}' 2>/dev/null || true"
+        end
+      end
+
+      puts "  Icon applied successfully"
+
+    when "external"
+      require 'digest'
+      require 'tempfile'
+
+      tmpfile = Tempfile.new(["icon-", ".icns"])
+      system "curl", "-fsSL", "-o", tmpfile.path, icon[:url]
+      odie "Failed to download external icon" unless $?.success?
+
+      actual_sha = Digest::SHA256.file(tmpfile.path).hexdigest
+      if actual_sha != icon[:sha256]
+        odie <<~ERROR
+          SHA256 mismatch for external icon
+          Expected: #{icon[:sha256]}
+          Actual:   #{actual_sha}
+        ERROR
+      end
+
+      FileUtils.rm_f(target_icon)
+      FileUtils.cp(tmpfile.path, target_icon)
+      FileUtils.rm_f(target_assets)
+      tmpfile.unlink
+      puts "  Icon applied successfully"
+    else
+      odie "Unknown icon type: #{icon[:type]}"
+    end
+
+    # Touch app to update Finder cache
+    system "touch", app_path.to_s
+    system "touch", (prefix/"Emacs Client.app").to_s if (prefix/"Emacs Client.app").exist?
+  end
+
   # ============================================================
   # PATH Injection
   # ============================================================
@@ -512,6 +619,38 @@ class EmacsBase < Formula
         export PATH='#{escaped_path}'
       fi
     EOS
+  end
+
+  def inject_emacs_plus_site_lisp(major_version)
+    app = "#{prefix}/Emacs.app"
+    site_lisp_dir = "#{app}/Contents/Resources/site-lisp"
+
+    ohai "Creating Emacs Plus site-lisp with ns-emacs-plus-version = #{major_version}"
+
+    # Create site-lisp directory
+    FileUtils.mkdir_p(site_lisp_dir)
+
+    # Create site-start.el with the version variable
+    File.open("#{site_lisp_dir}/site-start.el", "w") do |f|
+      f.write <<~EOS
+        ;;; site-start.el --- Emacs Plus site initialization -*- lexical-binding: t -*-
+
+        ;; This file is automatically generated by emacs-plus.
+        ;; It defines variables to identify this as an Emacs Plus build.
+
+        (defconst ns-emacs-plus-version #{major_version}
+          "Major version of Emacs Plus that built this Emacs.
+        This can be used to detect Emacs Plus in your init.el:
+
+          (when (bound-and-true-p ns-emacs-plus-version)
+            ;; Emacs Plus specific configuration
+            )")
+
+        (provide 'emacs-plus)
+
+        ;;; site-start.el ends here
+      EOS
+    end
   end
 
   def inject_path
@@ -534,6 +673,11 @@ class EmacsBase < Formula
       f.write <<~EOS
         #!/bin/sh
         #{path_injection_snippet.chomp}
+        # Prepend Emacs Plus site-lisp to load-path for site-start.el
+        EMACS_PLUS_SITE_LISP="$(dirname "$0")/../Resources/site-lisp"
+        if [ -d "$EMACS_PLUS_SITE_LISP" ]; then
+          export EMACSLOADPATH="$EMACS_PLUS_SITE_LISP:${EMACSLOADPATH:-}"
+        fi
         exec "$(dirname "$0")/Emacs-real" "$@"
       EOS
     end

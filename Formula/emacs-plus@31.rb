@@ -92,6 +92,7 @@ class EmacsPlusAT31 < EmacsBase
   #
 
   opoo "The option --with-no-frame-refocus is not required anymore in emacs-plus@31." if build.with? "no-frame-refocus"
+  opoo "The option --with-imagemagick is deprecated and will be removed in a future version. Modern Emacs has native support for most image formats (SVG via librsvg, WebP, PNG, JPEG, GIF). If you rely on ImageMagick, please open an issue describing your use case." if build.with? "imagemagick"
   local_patch "system-appearance", sha: "53283503db5ed2887e9d733baaaf80f2c810e668e782e988bda5855a0b1ebeb4"
   local_patch "round-undecorated-frame", sha: "26947b6724fc29fadd44889808c5cf0b4ce6278cf04f46086a21df50c8c4151d"
   local_patch "mac-font-use-typo-metrics", sha: "318395d3869d3479da4593360bcb11a5df08b494b995287074d0d744ec562c17"
@@ -235,6 +236,9 @@ class EmacsPlusAT31 < EmacsBase
       # (prefix/"Emacs.app/Contents").install "native-lisp"
       prefix.install "nextstep/Emacs Client.app"
 
+      # inject Emacs Plus site-lisp with ns-emacs-plus-version
+      inject_emacs_plus_site_lisp(31)
+
       # inject PATH to Info.plist
       inject_path
 
@@ -304,15 +308,24 @@ class EmacsPlusAT31 < EmacsBase
 
   def post_install
     emacs_info_dir = info/"emacs"
-    Dir.glob(emacs_info_dir/"*.info") do |info_filename|
+    Dir.glob(emacs_info_dir/"*.info{,.gz}") do |info_filename|
       system "install-info", "--info-dir=#{emacs_info_dir}", info_filename
     end
+
+    # Re-apply icon from build.yml (allows quick testing via `brew postinstall`)
+    apply_icon_post_install
 
     # Re-sign the app for macOS Sequoia compatibility (issue #742)
     app_path = prefix/"Emacs.app"
     if app_path.exist?
       ohai "Re-signing Emacs.app for macOS compatibility..."
       system "codesign", "--force", "--deep", "--sign", "-", app_path.to_s
+    end
+
+    # Also re-sign Emacs Client.app
+    client_path = prefix/"Emacs Client.app"
+    if client_path.exist?
+      system "codesign", "--force", "--deep", "--sign", "-", client_path.to_s
     end
   end
 
