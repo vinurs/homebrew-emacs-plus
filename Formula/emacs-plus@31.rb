@@ -89,6 +89,7 @@ class EmacsPlusAT31 < EmacsBase
   local_patch "round-undecorated-frame", sha: "26947b6724fc29fadd44889808c5cf0b4ce6278cf04f46086a21df50c8c4151d"
   # 自动切换输入法
   local_patch "ns-mac-input-source", sha: "99fefba9eb0725743a901cd95e0deb575193e1d258094cb56ccbac37ada0ffa2"
+  local_patch "fix-macos-tahoe-scrolling", sha: "1774fcc0141c663f8d7051cc6a55f4e8233d31ebf5c3c8678e15a8a01d786de7"
 
   #
   # Install
