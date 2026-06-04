@@ -94,7 +94,7 @@ class EmacsPlusAT32 < EmacsBase
       --enable-locallisppath=#{HOMEBREW_PREFIX}/share/emacs/site-lisp
       --infodir=#{info}/emacs
       --prefix=#{prefix}
-      --with-native-compilation=aot
+      --without-native-compilation
     ]
 
     args << "--with-xml2"
@@ -184,7 +184,7 @@ class EmacsPlusAT32 < EmacsBase
 
       # (prefix/"share/emacs/#{version}").install "lisp"
       prefix.install "nextstep/Emacs.app"
-      (prefix/"Emacs.app/Contents").install "native-lisp"
+      # (prefix/"Emacs.app/Contents").install "native-lisp"
       prefix.install "nextstep/Emacs Client.app"
 
       # inject Emacs Plus site-lisp with ns-emacs-plus-version
