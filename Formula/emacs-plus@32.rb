@@ -74,7 +74,7 @@ class EmacsPlusAT32 < EmacsBase
   local_patch "system-appearance", sha: "53283503db5ed2887e9d733baaaf80f2c810e668e782e988bda5855a0b1ebeb4"
   local_patch "round-undecorated-frame", sha: "c9430a1ead81e313b3d2877ff6f8044fb29441eecc7cc42000515d7c8ec6380f"
   # 自动切换输入法
-  local_patch "ns-mac-input-source", sha: "99fefba9eb0725743a901cd95e0deb575193e1d258094cb56ccbac37ada0ffa2"
+  local_patch "ns-mac-input-source", sha: "3ff958e05e41827551cd1e082eb6f5f16155bf49df4d3a6f58727a1308bbd714"
 
   #
   # Install
