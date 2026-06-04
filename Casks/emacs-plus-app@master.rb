@@ -1,29 +1,29 @@
 cask "emacs-plus-app@master" do
   # Version format: <emacs-version>-<build-number>
   # Build number corresponds to GitHub Actions run number
-  version "31.0.50-175"
+  version "32.0.50-204"
 
-  # Base URL for release assets (versioned releases: cask-31-<build>)
-  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-31-#{version.sub(/^[\d.]+-/, "")}"
+  # Base URL for release assets (versioned releases: cask-32-<build>)
+  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-32-#{version.sub(/^[\d.]+-/, "")}"
   emacs_ver = version.sub(/-\d+$/, "")
 
   on_intel do
-    sha256 "1247e9e26321b09ea344de7fac7787abe28a51426b3da2a00e4099b1a4ecc771"
+    sha256 "3f2cd982d0d10a8792e5cbd572b2fc5e1360688190e17a844ae0080ba6a0e87c"
     url "#{base_url}/emacs-plus-#{emacs_ver}-x86_64-15.zip",
         verified: "github.com/d12frosted/homebrew-emacs-plus"
   end
 
   on_arm do
     if MacOS.version >= :tahoe # macOS 26
-      sha256 "5596ada7a8f640c8d2296198a7e24f3381df37df969b6f626694fe06993bda15"
+      sha256 "9e10eb8cee7a5495270156c9b7afda7519fc9262c8c6a837155dda48b23cfbdf"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-26.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     elsif MacOS.version >= :sequoia # macOS 15
-      sha256 "a8b83121fdc302470224cf420f176c214c0149b84566a2e2b138daeb25aaf345"
+      sha256 "cf511908c4da7b972486fc6e2eb923ba4a95e70daaa64f16fd1a1bb415e6e79c"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-15.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     else # macOS 14 (Sonoma) and 13 (Ventura)
-      sha256 "d900ebaa246d8ebb066657d6cbac6f6e4001ce884203de4aa5d991fdabecf61d"
+      sha256 "82c933be5c8fd6dcb895ccaf3bc4a3cc787862f877b6c8d91e6ebd5ecfbe41a9"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-14.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     end
@@ -117,7 +117,7 @@ cask "emacs-plus-app@master" do
   caveats <<~EOS
     Emacs+ (development) has been installed to /Applications.
 
-    This is a pre-built binary from the Emacs master branch.
+    This is a pre-built binary from the Emacs master branch (Emacs 32).
     For custom patches or build options, use the formula instead:
       brew install emacs-plus@master --with-...
 

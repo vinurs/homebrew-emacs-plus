@@ -1,7 +1,7 @@
 require_relative "../Library/EmacsBase"
 
-class EmacsPlusAT30 < EmacsBase
-  init "30.2", sha256: "b3f36f18a6dd2715713370166257de2fae01f9d38cfe878ced9b1e6ded5befd9", branch: "emacs-30"
+class EmacsPlusAT32 < EmacsBase
+  init "32.0.50", branch: "master"
 
   desc "GNU Emacs text editor"
   homepage "https://www.gnu.org/software/emacs/"
@@ -14,7 +14,6 @@ class EmacsPlusAT30 < EmacsBase
   option "without-cocoa", "Build a non-Cocoa version of Emacs"
 
   # Opt-in
-  option "with-ctags", "Don't remove the ctags executable that Emacs provides"
   option "with-x11", "Experimental: build with x11 support"
   option "with-debug", "Build with debug symbols and debugger friendly optimizations"
   option "with-xwidgets", "Experimental: build with xwidgets support"
@@ -39,9 +38,8 @@ class EmacsPlusAT30 < EmacsBase
   depends_on "gnutls"
   depends_on "librsvg"
   depends_on "little-cms2"
-  depends_on "tree-sitter@0.25"
+  depends_on "tree-sitter"
   depends_on "webp"
-  depends_on "imagemagick" => :optional
   depends_on "dbus" => :optional
   depends_on "mailutils" => :optional
   # `libgccjit` and `gcc` are required when Emacs compiles `*.elc` files asynchronously (JIT)
@@ -72,11 +70,9 @@ class EmacsPlusAT30 < EmacsBase
   # Patches
   #
 
-  local_patch "fix-window-role", sha: "1f8423ea7e6e66c9ac6dd8e37b119972daa1264de00172a24a79a710efcb8130"
-  local_patch "system-appearance", sha: "9eb3ce80640025bff96ebaeb5893430116368d6349f4eb0cb4ef8b3d58477db6"
-  local_patch "round-undecorated-frame", sha: "7e39e694ce9dca50db72c09be442c1278d1900d69c2402f289742aeae8ea4c3e"
-  local_patch "fix-macos-tahoe-scrolling", sha: "847a38346c5d917c83ba8c28d63c85006e51e2c0e08c2a2343b3ec9a3f40e380"
   local_patch "fix-ns-x-colors", sha: "9e5d3e26a8d388d3a000b697d582769645ca93ad597b4113744deba4b89a8b9e"
+  local_patch "system-appearance", sha: "53283503db5ed2887e9d733baaaf80f2c810e668e782e988bda5855a0b1ebeb4"
+  local_patch "round-undecorated-frame", sha: "26947b6724fc29fadd44889808c5cf0b4ce6278cf04f46086a21df50c8c4151d"
 
   #
   # Install
@@ -86,7 +82,7 @@ class EmacsPlusAT30 < EmacsBase
     # Check icon options are not used with non-Cocoa builds
     check_icon_compatibility
     # Warn if revision is pinned via config or environment variable
-    check_pinned_revision(30)
+    check_pinned_revision(32)
     # Validate build.yml configuration early to fail fast
     validate_custom_config
 
@@ -135,21 +131,7 @@ class EmacsPlusAT30 < EmacsBase
         "--without-dbus"
       end
 
-    # Note that if ./configure is passed --with-imagemagick but can't find the
-    # library it does not fail but imagemagick support will not be available.
-    # See: https://debbugs.gnu.org/cgi/bugreport.cgi?bug=24455
-    args <<
-      if build.with?("imagemagick")
-        "--with-imagemagick"
-      else
-        "--without-imagemagick"
-      end
-
-    if build.with? "imagemagick"
-      imagemagick_lib_path = Formula["imagemagick"].opt_lib/"pkgconfig"
-      ohai "ImageMagick PKG_CONFIG_PATH: ", imagemagick_lib_path
-      ENV.prepend_path "PKG_CONFIG_PATH", imagemagick_lib_path
-    end
+    args << "--without-imagemagick"
 
     args << "--with-modules"
     args << "--with-rsvg"
@@ -204,7 +186,7 @@ class EmacsPlusAT30 < EmacsBase
       prefix.install "nextstep/Emacs Client.app"
 
       # inject Emacs Plus site-lisp with ns-emacs-plus-version
-      inject_emacs_plus_site_lisp(30)
+      inject_emacs_plus_site_lisp(32)
 
       # inject PATH to Info.plist
       inject_path
@@ -263,17 +245,6 @@ class EmacsPlusAT30 < EmacsBase
 
       system "gmake", "install"
     end
-
-    # Follow MacPorts and don't install ctags from Emacs. This allows Vim
-    # and Emacs and ctags to play together without violence.
-    if build.without? "ctags"
-      (bin/"ctags").unlink
-      if build.with? "compress-install"
-        (man1/"ctags.1.gz").unlink
-      else
-        (man1/"ctags.1").unlink
-      end
-    end
   end
 
   def post_install
@@ -318,7 +289,7 @@ class EmacsPlusAT30 < EmacsBase
 
       If Emacs fails to start with "Library not loaded" errors after upgrading
       dependencies (e.g., tree-sitter, libgccjit), reinstall emacs-plus:
-        brew reinstall emacs-plus@30
+        brew reinstall emacs-plus@32
 
       Report any issues to https://github.com/d12frosted/homebrew-emacs-plus
     EOS
