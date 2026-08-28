@@ -1,29 +1,29 @@
 cask "emacs-plus-app@master" do
   # Version format: <emacs-version>-<build-number>
   # Build number corresponds to GitHub Actions run number
-  version "32.0.50-301"
+  version "32.0.50-310"
 
-  # Base URL for release assets (versioned releases: cask-32-<build>)
-  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-32-#{version.sub(/^[\d.]+-/, "")}"
+  # Base URL for release assets (lane releases: cask-master-<build>)
+  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-master-#{version.sub(/^[\d.]+-/, "")}"
   emacs_ver = version.sub(/-\d+$/, "")
 
   on_intel do
-    sha256 "f36608fdec96689d079e322f327264146aa0b83d3f961ce753846ae7a92bc9cd"
+    sha256 "534390a05e7e1a694eeb4b7f41a01988cd2d758b050f44f04c8edce0c7587156"
     url "#{base_url}/emacs-plus-#{emacs_ver}-x86_64-15.zip",
         verified: "github.com/d12frosted/homebrew-emacs-plus"
   end
 
   on_arm do
     if MacOS.version >= :tahoe # macOS 26
-      sha256 "79028bc901e27850df8948805dc343b7bd2347690e50f67194d7404f2605ef87"
+      sha256 "f51c427e8bb677bdde1a437d992ee46915daf127d80723c4fa967cf879e4b06c"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-26.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     elsif MacOS.version >= :sequoia # macOS 15
-      sha256 "d46abf51c3dbb77fc6618fbae1977ceaa8989c2ca9e68a4c9f5279f905982171"
+      sha256 "710e68ad297a451d01c3c2ebd671073d8c23590424c9d03ce071964243a44ff9"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-15.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     else # macOS 14 (Sonoma) and 13 (Ventura)
-      sha256 "7acb2eef27c15454af3b8f74b79ef398cfeba9db1b4faf4ef1ef59aa787a8e02"
+      sha256 "1c42a6adeed55acfaeed2b996aaccb9e9314645e72170ec492656966e0e38017"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-14.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     end
@@ -65,9 +65,14 @@ cask "emacs-plus-app@master" do
   end
 
   # Clean up emacs symlink on uninstall (since we create it manually in postflight)
+  # Only remove it when it points into this cask's Emacs.app: the formulas
+  # link bin/emacs too, and that symlink is not ours to delete
   uninstall_postflight do
     emacs_symlink = "#{HOMEBREW_PREFIX}/bin/emacs"
-    FileUtils.rm_f(emacs_symlink) if File.symlink?(emacs_symlink)
+    if File.symlink?(emacs_symlink) &&
+       File.readlink(emacs_symlink).start_with?("#{appdir}/Emacs.app/")
+      FileUtils.rm_f(emacs_symlink)
+    end
   end
 
   # Symlink binaries (emacs symlink created in postflight after wrapper is generated)
@@ -88,7 +93,6 @@ cask "emacs-plus-app@master" do
     "~/Library/Caches/org.gnu.Emacs",
     "~/Library/Preferences/org.gnu.Emacs.plist",
     "~/Library/Saved Application State/org.gnu.Emacs.savedState",
-    "~/.emacs.d",
   ]
 
   caveats <<~EOS

@@ -3,6 +3,61 @@
 
 This file documents notable changes to Emacs Plus.
 
+* 2026-08-27
+
+** Bug Fixes
+
+*** Formula =emacs= wrapper prefers its own =Emacs.app=
+
+The =emacs= wrapper installed by =emacs-plus@29= through =emacs-plus@32= looked for =Emacs.app= in =/Applications= first and only then in the formula's own prefix. That order predates the casks: with =emacs-plus-app= installed, a formula user running =emacs= in the terminal (or =brew services start emacs-plus@N=) silently got the cask's Emacs, possibly a different major version. The wrapper now runs the formula's own bundle first and falls back to =/Applications= and =~/Applications= only when it is missing, so copies made for Spotlight integration keep working. Reinstall the formula to get the fixed wrapper.
+
+*** Cask uninstall no longer deletes the formula's =emacs= symlink
+
+Uninstalling an =emacs-plus-app= cask removed any symlink at =$(brew --prefix)/bin/emacs=, including one created by a linked =emacs-plus@N= formula, silently leaving the formula unlinked. The cask now checks where the symlink points and only removes it when it leads into the cask's own =Emacs.app=.
+
+*** Cask =zap= no longer trashes =~/.emacs.d=
+
+=brew uninstall --zap --cask emacs-plus-app= (and the =@next= / =@master= variants) moved =~/.emacs.d= to the Trash along with the app caches. That directory is your own Emacs configuration, not something the cask created, so zap now leaves it alone and only removes the app state under =~/Library=.
+
+* 2026-08-25
+
+** Releases
+
+*** Emacs 31.1 is the default
+
+Emacs 31.1 is out, so the default moves from Emacs 30 to Emacs 31. =brew install emacs-plus= builds =emacs-plus@31= from the release tarball, and the =emacs-plus-app= cask ships Emacs 31.1.
+
+#+begin_src bash
+  $ brew upgrade emacs-plus
+  $ brew upgrade --cask emacs-plus-app
+#+end_src
+
+Emacs 30 stays available as =emacs-plus@30=. The stable cask no longer creates the =emacs-ctags= symlink, since =ctags= was removed in Emacs 31.
+
+** Changes
+
+*** Cask lanes: stable, next and master
+
+Cask releases are tagged =cask-stable-<build>=, =cask-next-<build>= and =cask-master-<build>= instead of being numbered by Emacs version. Stable and next are both Emacs 31 now, so the version number no longer tells the lanes apart.
+
+=emacs-plus-app@next= keeps tracking the Emacs release branch. Right after a major release that means 31.1 plus the fixes going into 31.2, and later in the cycle it becomes the pretest for the next major version. The source equivalent is:
+
+#+begin_src bash
+  $ brew install emacs-plus --HEAD
+#+end_src
+
+** Improvements
+
+*** Reinstall documentation matches the formula caveats
+
+The =Reinstall= section of the README advised against =brew reinstall=, while the formula caveats and the rest of the README tell you to use it (after editing =build.yml=, pinning a revision, or fixing =Library not loaded= errors). The old advice was about =brew= losing command line options, which =brew= fixed years ago. Reported in [[https://github.com/d12frosted/homebrew-emacs-plus/issues/986][#986]].
+
+** Bug Fixes
+
+*** Cask builds were missing the NS scroll crash fix
+
+The =fix-ns-scroll-crash= patch (bug#81585, see the 2026-08-18 entry) is applied by the formulas, but the cask build jobs skipped it, so =emacs-plus-app@next= and =emacs-plus-app@master= did not have it. Fixed with the next nightly build.
+
 * 2026-08-18
 
 ** Bug Fixes

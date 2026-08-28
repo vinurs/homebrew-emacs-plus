@@ -1,36 +1,36 @@
 cask "emacs-plus-app@next" do
   # Version format: <emacs-version>-<build-number>
   # Build number corresponds to GitHub Actions run number
-  version "31.1-301"
+  version "31.1.50-310"
 
-  # Base URL for release assets (versioned releases: cask-31-<build>)
-  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-31-#{version.sub(/^[\d.]+-/, "")}"
+  # Base URL for release assets (lane releases: cask-next-<build>)
+  base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-next-#{version.sub(/^[\d.]+-/, "")}"
   emacs_ver = version.sub(/-\d+$/, "")
 
   on_intel do
-    sha256 "6a0d6008a3e3852e4c699d1db85721c2eb27bbb2cb49f68431b20d003cb70e56"
+    sha256 "f82e1bbc310f81176d30d6f99add5b571c6d5708310f471b3d956a5f539620d6"
     url "#{base_url}/emacs-plus-#{emacs_ver}-x86_64-15.zip",
         verified: "github.com/d12frosted/homebrew-emacs-plus"
   end
 
   on_arm do
     if MacOS.version >= :tahoe # macOS 26
-      sha256 "c14fee41f726a3dbde697388c48d5908f746e70ac909caf7060b385a66b17e2a"
+      sha256 "d686a4940cb60d4532e9432b8bcb29c755ebd1f78cbe50d2b8729e63e4617dbf"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-26.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     elsif MacOS.version >= :sequoia # macOS 15
-      sha256 "aac3f51652fc4d7f4466538afd074ee2c5b0bcee0f394e75c03458d4c8ee4856"
+      sha256 "137a8acae9a5b497d112c30100a37409dead1a5729dc3c9e8b7ba4c2ac585eff"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-15.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     else # macOS 14 (Sonoma) and 13 (Ventura)
-      sha256 "d1ad54dd74721f94d3ae3e7febfc49c9cf2fc0270c8ac0d03e7b2873933d767a"
+      sha256 "1290903c8850381463176330926f3fc8201ab7e476dd2da06a5f6eeb768b8d81"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-14.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     end
   end
 
-  name "Emacs+ (Pre-release)"
-  desc "GNU Emacs text editor with patches for macOS (next stable release)"
+  name "Emacs+ (Next)"
+  desc "GNU Emacs text editor with patches for macOS (Emacs release branch)"
   homepage "https://github.com/d12frosted/homebrew-emacs-plus"
 
   # Required for native compilation (JIT) at runtime
@@ -65,9 +65,14 @@ cask "emacs-plus-app@next" do
   end
 
   # Clean up emacs symlink on uninstall (since we create it manually in postflight)
+  # Only remove it when it points into this cask's Emacs.app: the formulas
+  # link bin/emacs too, and that symlink is not ours to delete
   uninstall_postflight do
     emacs_symlink = "#{HOMEBREW_PREFIX}/bin/emacs"
-    FileUtils.rm_f(emacs_symlink) if File.symlink?(emacs_symlink)
+    if File.symlink?(emacs_symlink) &&
+       File.readlink(emacs_symlink).start_with?("#{appdir}/Emacs.app/")
+      FileUtils.rm_f(emacs_symlink)
+    end
   end
 
   # Symlink binaries (emacs symlink created in postflight after wrapper is generated)
@@ -89,17 +94,17 @@ cask "emacs-plus-app@next" do
     "~/Library/Caches/org.gnu.Emacs",
     "~/Library/Preferences/org.gnu.Emacs.plist",
     "~/Library/Saved Application State/org.gnu.Emacs.savedState",
-    "~/.emacs.d",
   ]
 
   caveats <<~EOS
-    Emacs+ (pre-release) has been installed to /Applications.
+    Emacs+ (next) has been installed to /Applications.
 
     This is a pre-built binary from the Emacs release branch (currently
-    Emacs 31, pretest). It tracks the next stable release: less bleeding
-    edge than @master, newer than the stable cask.
+    emacs-31). It carries the fixes that land after the last release and
+    go into the next one: newer than the stable cask, less bleeding edge
+    than @master.
     For custom patches or build options, use the formula instead:
-      brew install emacs-plus@31 --with-...
+      brew install emacs-plus --HEAD --with-...
 
     Custom icons can be configured via ~/.config/emacs-plus/build.yml:
       icon: dragon-plus
