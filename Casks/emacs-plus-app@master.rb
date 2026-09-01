@@ -1,43 +1,54 @@
 cask "emacs-plus-app@master" do
   # Version format: <emacs-version>-<build-number>
   # Build number corresponds to GitHub Actions run number
-  version "32.0.50-310"
+  version "32.0.50-316"
 
   # Base URL for release assets (lane releases: cask-master-<build>)
   base_url = "https://github.com/d12frosted/homebrew-emacs-plus/releases/download/cask-master-#{version.sub(/^[\d.]+-/, "")}"
   emacs_ver = version.sub(/-\d+$/, "")
 
-  on_intel do
-    sha256 "534390a05e7e1a694eeb4b7f41a01988cd2d758b050f44f04c8edce0c7587156"
-    url "#{base_url}/emacs-plus-#{emacs_ver}-x86_64-15.zip",
-        verified: "github.com/d12frosted/homebrew-emacs-plus"
-  end
-
   on_arm do
+    # Oldest prebuilt arm64 binary targets macOS 14 (built on the macos-14
+    # runner), so Ventura cannot run it
+    depends_on macos: :sonoma
+
     if MacOS.version >= :tahoe # macOS 26
-      sha256 "f51c427e8bb677bdde1a437d992ee46915daf127d80723c4fa967cf879e4b06c"
+      sha256 "e02089ab1c8c758f18f62ed707a2063fdd3097ecfc6247537a1d322386b27447"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-26.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     elsif MacOS.version >= :sequoia # macOS 15
-      sha256 "710e68ad297a451d01c3c2ebd671073d8c23590424c9d03ce071964243a44ff9"
+      sha256 "b1326fcab4bb81e4a0b785b2e637cde8e065c6e3f84322aca7f25893aa27c72b"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-15.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
-    else # macOS 14 (Sonoma) and 13 (Ventura)
-      sha256 "1c42a6adeed55acfaeed2b996aaccb9e9314645e72170ec492656966e0e38017"
+    else # macOS 14 (Sonoma)
+      sha256 "19e92cdf48d494ca0d01b05d347cda703f173440d9eb4b32d5b985bda38e4a1a"
       url "#{base_url}/emacs-plus-#{emacs_ver}-arm64-14.zip",
           verified: "github.com/d12frosted/homebrew-emacs-plus"
     end
   end
+  on_intel do
+    # Intel assets can lag behind the arm64 ones. Homebrew treats x86_64 macOS
+    # as a tier 3 configuration and stopped bottling some dependencies for it,
+    # so the Intel build breaks on its own schedule and a release can ship
+    # without it. This pin points at the last release that did produce an Intel
+    # binary, so it is expected to trail the version above from time to time.
+    intel_version = "32.0.50-316"
+    intel_emacs_ver = intel_version.sub(/-\d+$/, "")
+    intel_base_url = base_url.sub(/-\d+$/, "-#{intel_version.sub(/^[\d.]+-/, "")}")
+
+    sha256 "b26b85b4d957586d3f5a301c1506b16dc72b1bade4a4d29c88b219a2cfafb893"
+
+    url "#{intel_base_url}/emacs-plus-#{intel_emacs_ver}-x86_64-15.zip",
+        verified: "github.com/d12frosted/homebrew-emacs-plus"
+
+    # The only Intel build targets macOS 15 (built on the macos-15-intel
+    # runner, the sole Intel runner available)
+    depends_on macos: :sequoia
+  end
 
   name "Emacs+ (Development)"
-  desc "GNU Emacs text editor with patches for macOS (development version)"
+  desc "GNU Emacs text editor with patches (development version)"
   homepage "https://github.com/d12frosted/homebrew-emacs-plus"
-
-  # Required for native compilation (JIT) at runtime
-  # - libgccjit: JIT compilation library
-  # - gcc: provides toolchain and libemutls_w.a runtime library
-  depends_on formula: "libgccjit"
-  depends_on formula: "gcc"
 
   # Conflict with other Emacs cask installations
   conflicts_with cask: [
@@ -47,10 +58,27 @@ cask "emacs-plus-app@master" do
     "emacs-plus-app",
     "emacs-plus-app@next",
   ]
+  # Required for native compilation (JIT) at runtime
+  # - libgccjit: JIT compilation library
+  # - gcc: provides toolchain and libemutls_w.a runtime library
+  depends_on formula: "libgccjit"
+  depends_on formula: "gcc"
+  depends_on :macos
 
   # Install the app
   app "Emacs.app"
   app "Emacs Client.app"
+  # Symlink binaries (emacs symlink created in postflight after wrapper is generated)
+  # Note: emacs is symlinked manually in postflight because the wrapper script
+  # is created there and binary stanzas run before postflight
+  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/emacsclient"
+  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/ebrowse"
+  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/etags"
+  # Man pages (not gzipped in the build)
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacs.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacsclient.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/ebrowse.1"
+  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/etags.1"
 
   # Remove quarantine attribute, inject PATH, and apply custom icon
   # (shared logic for all emacs-plus-app casks lives in Library/CaskPostflight.rb)
@@ -58,10 +86,10 @@ cask "emacs-plus-app@master" do
     tap = Tap.fetch("d12frosted", "emacs-plus")
     load "#{tap.path}/Library/CaskPostflight.rb"
     CaskPostflight.run(self,
-                       emacs_app: "#{appdir}/Emacs.app",
+                       emacs_app:        "#{appdir}/Emacs.app",
                        emacs_client_app: "#{appdir}/Emacs Client.app",
-                       version: version.major,
-                       homebrew_prefix: HOMEBREW_PREFIX.to_s)
+                       version:          version.major,
+                       homebrew_prefix:  HOMEBREW_PREFIX.to_s)
   end
 
   # Clean up emacs symlink on uninstall (since we create it manually in postflight)
@@ -71,22 +99,9 @@ cask "emacs-plus-app@master" do
     emacs_symlink = "#{HOMEBREW_PREFIX}/bin/emacs"
     if File.symlink?(emacs_symlink) &&
        File.readlink(emacs_symlink).start_with?("#{appdir}/Emacs.app/")
-      FileUtils.rm_f(emacs_symlink)
+      FileUtils.rm(emacs_symlink)
     end
   end
-
-  # Symlink binaries (emacs symlink created in postflight after wrapper is generated)
-  # Note: emacs is symlinked manually in postflight because the wrapper script
-  # is created there and binary stanzas run before postflight
-  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/emacsclient"
-  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/ebrowse"
-  binary "#{appdir}/Emacs.app/Contents/MacOS/bin/etags"
-
-  # Man pages (not gzipped in the build)
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacs.1"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/emacsclient.1"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/ebrowse.1"
-  manpage "#{appdir}/Emacs.app/Contents/Resources/man/man1/etags.1"
 
   # Cleanup on uninstall
   zap trash: [
@@ -110,5 +125,10 @@ cask "emacs-plus-app@master" do
 
     Note: Emacs Client.app requires Emacs to be running as a daemon.
     Add to your Emacs config: (server-start)
+
+    Note: installing this cask alongside an emacs-plus@N formula is not
+    supported. Both provide emacs and emacsclient in $(brew --prefix)/bin,
+    and Homebrew cannot declare a conflict between a cask and a formula.
+    Keep one or the other installed.
   EOS
 end
