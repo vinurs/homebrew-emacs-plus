@@ -3,6 +3,34 @@
 
 This file documents notable changes to Emacs Plus.
 
+* 2026-09-08
+
+** Improvements
+
+*** Casks use =postflight_steps=
+
+Homebrew 6.0.22 deprecated the =postflight= and =uninstall_postflight= blocks casks used to run arbitrary Ruby after install, and warns about them on every load ("Calling =postflight= is deprecated! Use =postflight_steps= instead"). The replacement is a fixed list of literal steps that Homebrew runs in a sandbox, so the three casks now run the same setup (quarantine removal, environment injection, custom icon, re-signing) through =scripts/cask-postflight= as a =run= step, and the =bin/emacs= symlink is a declarative =symlink= step that Homebrew also cleans up on uninstall. Nothing changes for users: =build.yml= icons still apply, =brew reinstall --cask= still re-applies them.
+
+One consequence of the sandbox: the postflight can only read =~/.config/emacs-plus= and =~/.emacs-plus-build.yml= from your home directory, so a =HOMEBREW_EMACS_PLUS_BUILD_CONFIG= pointing elsewhere under =$HOME= is not visible to cask installs.
+
+** Bug fixes
+
+*** =brew tap d12frosted/emacs-plus= works again
+
+Dropping the Intel cask builds on 2026-09-05 left the cask =url= only inside the =on_arm= block. =brew tap= loads every cask on every OS and architecture pair before it accepts a tap, and on Intel the casks had no url, so tapping failed with "Invalid cask (macOS N on intel)" and "invalid syntax in tap". Existing checkouts kept working, which is why this went unnoticed for a few days. The url now lives at the top level and =depends_on arch: :arm64= is what refuses the install on Intel. CI runs the same readall check now. See [[https://github.com/d12frosted/homebrew-emacs-plus/issues/1005][#1005]].
+
+The casks also stop passing the =verified:= parameter to =url= and declare =depends_on macos: :sonoma= at the top level instead of a bare =depends_on :macos=: Homebrew 6.0.22 deprecated the former and disabled combining the latter two. The =postflight= deprecation warning from the same release is still there; that migration is a separate change.
+
+* 2026-09-05
+
+** Breaking changes
+
+*** Intel (x86_64) cask builds are gone
+
+Homebrew treats x86_64 macOS as a tier 3 configuration and has been dropping Intel bottles one dependency at a time: =tree-sitter= on 2026-09-01, =gcc= on 2026-09-03. The gcc one means a two hour source build on the Intel runner, and that build then fails in a way that has nothing to do with Emacs. Apple ships no new macOS for Intel after Tahoe, and GitHub retires =macos-15-intel=, the last x86_64 runner, in August 2027. Keeping the Intel leg alive had become a chore, so it is gone: the three casks are arm64 only (=depends_on arch: :arm64=) and the build matrix has no Intel leg.
+
+If you use Emacs+ on an Intel Mac, install the formula instead (=brew install emacs-plus@31=). It builds from source and needs no runner, though Homebrew's tier 3 status means some dependencies build from source too. The last Intel cask assets stay downloadable from the releases page. See [[https://github.com/d12frosted/homebrew-emacs-plus/issues/1002][#1002]].
+
 * 2026-09-01
 
 ** Improvements
