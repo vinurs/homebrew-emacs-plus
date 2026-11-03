@@ -350,8 +350,7 @@ class EmacsBase < Formula
       if patch[:type] == "community"
         maintainer_str = format_maintainer(patch[:metadata]&.dig("maintainer"))
         puts "    Maintainer: #{maintainer_str}" if maintainer_str
-        system "patch", "-p1", "-i", patch[:path]
-        odie "Failed to apply community patch: #{patch[:name]}" unless $?.success?
+        apply_patch_file(patch[:name], patch[:path], "community")
       elsif patch[:type] == "local"
         actual_sha = Digest::SHA256.file(patch[:path]).hexdigest
         if actual_sha != patch[:sha256]
@@ -361,8 +360,7 @@ class EmacsBase < Formula
             Actual:   #{actual_sha}
           ERROR
         end
-        system "patch", "-p1", "-i", patch[:path]
-        odie "Failed to apply local patch: #{patch[:name]}" unless $?.success?
+        apply_patch_file(patch[:name], patch[:path], "local")
       else
         # External: download with curl, verify SHA256
         tmpfile = Tempfile.new(["patch-#{patch[:name]}-", ".patch"])
@@ -378,10 +376,23 @@ class EmacsBase < Formula
           ERROR
         end
 
-        system "patch", "-p1", "-i", tmpfile.path
-        odie "Failed to apply external patch: #{patch[:name]}" unless $?.success?
+        apply_patch_file(patch[:name], tmpfile.path, "external")
         tmpfile.unlink
       end
+    end
+  end
+
+  # Apply a patch without ever prompting. A bare `patch` asks "Assume -R?"
+  # when the patch is already applied (e.g. merged upstream), which hangs
+  # the build since the prompt goes to the log, not the terminal.
+  def apply_patch_file(name, path, kind)
+    if quiet_system "patch", "-p1", "-N", "-t", "--dry-run", "-i", path
+      system "patch", "-p1", "-N", "-t", "-i", path
+      odie "Failed to apply #{kind} patch: #{name}" unless $?.success?
+    elsif quiet_system "patch", "-p1", "-R", "-t", "--dry-run", "-i", path
+      opoo "Skipping #{kind} patch #{name}: it is already applied (probably merged upstream). Consider removing it from build.yml."
+    else
+      odie "Failed to apply #{kind} patch: #{name} (does not apply cleanly to this source)"
     end
   end
 
@@ -552,6 +563,14 @@ class EmacsBase < Formula
     paths.compact.join(":")
   end
 
+  # Write lisp/site-init.el into the source tree. Emacs loads it while
+  # dumping, so the native-comp driver options it sets up apply even with
+  # -Q or --no-site-file. Must run before the build.
+  def write_site_init
+    ohai "Writing lisp/site-init.el (native-comp driver options)"
+    File.write("lisp/site-init.el", BuildConfig.site_init_el(HOMEBREW_PREFIX))
+  end
+
   def inject_emacs_plus_site_lisp(major_version)
     # Install to Homebrew's shared site-lisp directory
     # Emacs looks here for site-start.el at startup
@@ -595,8 +614,6 @@ class EmacsBase < Formula
                                   (list exec-directory)))
           ;; Set PATH in process-environment for subprocesses
           (setenv "PATH" emacs-plus-path))
-
-        #{BuildConfig.native_comp_driver_options_el(HOMEBREW_PREFIX).chomp}
 
         (provide 'emacs-plus)
 
@@ -724,7 +741,9 @@ class EmacsBase < Formula
     # Use the same build_path logic as inject_path for consistency
     escaped_path = escape_for_applescript_shell(build_path)
 
-    # Create AppleScript source
+    # Create AppleScript source. emacsclient is called through opt_prefix:
+    # upgrades replace the versioned keg path, and a copy of the app in
+    # /Applications would otherwise point at a keg that no longer exists.
     client_script = buildpath/"emacs-client.applescript"
     client_script.write <<~EOS
       -- Emacs Client AppleScript Application
@@ -734,33 +753,39 @@ class EmacsBase < Formula
         repeat with oneDrop in theDropped
           set dropPath to quoted form of POSIX path of oneDrop
           try
-            do shell script "PATH='#{escaped_path}' #{prefix}/bin/emacsclient -c -a '' -n " & dropPath
+            do shell script "PATH='#{escaped_path}' #{opt_prefix}/bin/emacsclient -c -a '' -n " & dropPath
           end try
         end repeat
-        try
-          do shell script "open -a Emacs"
-        end try
+        my activateEmacs()
       end open
 
       -- Handle launch without files (from Spotlight, Dock, or Finder)
       on run
         try
-          do shell script "PATH='#{escaped_path}' #{prefix}/bin/emacsclient -c -a '' -n"
+          do shell script "PATH='#{escaped_path}' #{opt_prefix}/bin/emacsclient -c -a '' -n"
         end try
-        try
-          do shell script "open -a Emacs"
-        end try
+        my activateEmacs()
       end run
 
       -- Handle org-protocol:// URLs (for org-capture, org-roam, etc.)
+      -- -r reuses the current frame and creates one only if the daemon has none
       on open location this_URL
         try
-          do shell script "PATH='#{escaped_path}' #{prefix}/bin/emacsclient -n " & quoted form of this_URL
+          do shell script "PATH='#{escaped_path}' #{opt_prefix}/bin/emacsclient -r -a '' -n " & quoted form of this_URL
         end try
-        try
-          do shell script "open -a Emacs"
-        end try
+        my activateEmacs()
       end open location
+
+      -- Bring the running Emacs to the front. `open -a Emacs` would pick an
+      -- Emacs.app by name and could start a second Emacs next to the daemon.
+      -- The id is kept in a variable so osacompile does not look the app up
+      -- at compile time, when Emacs.app may not be installed yet.
+      on activateEmacs()
+        set emacsId to "org.gnu.Emacs"
+        try
+          tell application id emacsId to activate
+        end try
+      end activateEmacs
     EOS
 
     # Compile AppleScript to application bundle
